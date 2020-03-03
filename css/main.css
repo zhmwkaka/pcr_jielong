@@ -1,0 +1,69 @@
+* {
+    text-align: center;
+}
+
+#container {
+    width: 700px;
+    margin: 10px auto;
+}
+
+#help {
+    text-align: left;
+}
+
+#util {
+    text-align: left;
+}
+
+#meta {
+    width: 100%;
+    margin: 0px auto;
+    line-height: 30px;
+    clear: both;
+}
+
+#meta>div {
+    float: left;
+    width: 50px;
+    height: 30px;
+    background-color: #EEE;
+    align-self: center;
+    cursor: pointer;
+}
+
+#meta>div:hover {
+    background-color: #CCC;
+}
+
+#game {
+    min-height: 100px;
+    width: 100%;
+    clear: both;
+}
+
+#game>div {
+    float: left;
+    height: 80px;
+}
+
+#game .icon {
+    height: 78px;
+    width: 78px;
+    margin: 1px;
+}
+
+footer {
+    clear: both;
+}
+
+.icon {
+    position: relative;
+    background-image: url(https://i.loli.net/2020/03/03/sIZwimkEDNQ82Yl.png);
+}
+
+.clicked {
+    display: inline-block;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+}
