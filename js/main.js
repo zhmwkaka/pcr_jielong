@@ -75,7 +75,7 @@ function draw(configArray) {
         gameDiv.append($(`<div tail="${config.tail}" data-name="${config.name}" data-icon-id="${config.iconID}">
             <div class="icon" icon-id="${config.iconID}">
                 ${isClicked(config.name, config.iconID) ? '<img src="assets/dui.png" class="clicked"/>' : ""}
-                ${window.pcr.showName ? `<span>${config.name}</span>` : ''}
+                ${window.pcr.showName ? `<span class="text">${config.name}</span>` : ''}
             </div>
             </div>`).mousedown((e) => {
             switch (e.which) {

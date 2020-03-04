@@ -67,3 +67,8 @@ footer {
     right: 10px;
     bottom: 10px;
 }
+
+.text {
+    font-family: "Arial","Microsoft YaHei","黑体","宋体",sans-serif;
+    text-shadow: -1px 0 white, 0 1px white, 1px 0 white, 0 -1px white;
+}
