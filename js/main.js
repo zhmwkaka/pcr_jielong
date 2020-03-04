@@ -82,6 +82,7 @@ function draw(configArray) {
                 case 1:
                     if (window.pcr.editClickHistory) {
                         addClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
+                        reProcess();
                     } else {
                         addClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
                         process(e.currentTarget.getAttribute('tail'));
@@ -90,6 +91,7 @@ function draw(configArray) {
                 case 3:
                     if (window.pcr.editClickHistory) {
                         removeClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
+                        reProcess();
                     } else {
                         process(e.currentTarget.getAttribute('tail'));
                     }
@@ -115,7 +117,7 @@ function removeClickHistory(name, iconID) {
     if (!isClicked(name, iconID)) {
         return
     }
-    window.pcr.clickHistory.removeItem(iconID + name);
+    window.pcr.clickHistory.delete(iconID + name);
     localStorage.setItem("clickedHistory", JSON.stringify(Array.from(window.pcr.clickHistory)));
 }
 
