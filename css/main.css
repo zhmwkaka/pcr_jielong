@@ -44,12 +44,28 @@
 #game>div {
     float: left;
     height: 80px;
+    display: table;
 }
 
 #game .icon {
-    height: 78px;
-    width: 78px;
-    margin: 1px;
+    height: 79px;
+    width: 79px;
+    margin: 0.2em;
+    display: table;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.icon.normal {
+    border: 2px solid grey;
+}
+
+.icon.great {
+    border: 2px solid limegreen;
+}
+
+.icon.puricone {
+    border: 2px solid deeppink;
 }
 
 footer {

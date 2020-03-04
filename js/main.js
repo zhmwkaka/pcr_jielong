@@ -73,7 +73,7 @@ function draw(configArray) {
     gameDiv.empty();
     configArray.forEach(config => {
         gameDiv.append($(`<div tail="${config.tail}" data-name="${config.name}" data-icon-id="${config.iconID}">
-            <div class="icon" icon-id="${config.iconID}">
+            <div class="icon ${config.type}" icon-id="${config.iconID}">
                 ${isClicked(config.name, config.iconID) ? '<img src="assets/dui.png" class="clicked"/>' : ""}
                 ${window.pcr.showName ? `<span class="text">${config.name}</span>` : ''}
             </div>
