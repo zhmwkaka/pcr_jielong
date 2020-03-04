@@ -62,7 +62,7 @@ function sort(dataArray) {
 }
 
 function isMatchWord(e, selectWord) {
-    if (selectWord === null || e.head === selectWord) {
+    if (selectWord === null || selectWord === '全部' || e.head === selectWord) {
         return true;
     }
     return window.pcr.SAME_META.some(set => set.has(selectWord) && set.has(e.head));
