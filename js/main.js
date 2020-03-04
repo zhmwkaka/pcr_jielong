@@ -21,7 +21,7 @@ $("#showName").click(e => {
     reProcess();
 });
 
-$("#editClickHistroy").click(e => {
+$("#editClickHistory").click(e => {
     window.pcr.editClickHistory = e.currentTarget.checked;
     reProcess();
 });
