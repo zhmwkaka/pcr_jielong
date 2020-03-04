@@ -16,6 +16,8 @@ $("#clearClickHistory").click(e => {
     reProcess();
 });
 
+$(document).bind('contextmenu', e => false);
+
 $("#showName").click(e => {
     window.pcr.showName = e.currentTarget.checked;
     reProcess();
