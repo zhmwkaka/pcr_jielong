@@ -3,51 +3,39 @@ window.pcr.clickHistory = new Set(JSON.parse(localStorage.getItem("clickedHistor
 window.pcr.showName = false;
 window.pcr.editClickHistory = false;
 window.pcr.sortIf = true;
+window.pcr.nRecursive = 5; // odd number
+window.pcr.preWord = "全部";
 
 $.ajax('assets/data.json').done(data => {
     window.pcr.META = data.meta;
     window.pcr.DATA_ARRAY = data.data;
     window.pcr.SAME_META = new Set(data.sameMeta[0]);
-    // data.sameMeta.forEach(arr => window.pcr.SAME_META.push(new Set(arr)));
+    window.pcr.allList = { "me": {}, "npc": {} };
+    let tme = {};
+    let tnpc = {};
+    window.pcr.META.forEach(e => {
+        if (window.pcr.SAME_META.has(e)) {
+            window.pcr.allList.me[e] = tme;
+            window.pcr.allList.npc[e] = tnpc;
+        } else if (e !== "全部") {
+            window.pcr.allList.me[e] = {};
+            window.pcr.allList.npc[e] = {};
+        }
+    });
+    window.pcr.DATA_ARRAY.forEach(e => {
+        addToObj(window.pcr.allList.me[e.head], e.tail);
+        if (e.type !== "puricone") {
+            addToObj(window.pcr.allList.npc[e.head], e.tail);
+        }
+    });
     initData();
 });
 
-function count(name, iconID, head, tail, type) {
-    if (!isClicked(name, iconID)) {
-        let obj = window.pcr.remainingList[head]["me"];
-        addToObj(obj, tail);
-        if (type !== "puricone") {
-            obj = window.pcr.remainingList[head]["npc"];
-            addToObj(obj, tail);
-        }
-    }
- }
-
- function uncount(name, iconID, head, tail, type) {
-    if (isClicked(name, iconID)) {
-        let obj = window.pcr.remainingList[head]["me"];
-        removeFromObj(obj, tail);
-        if (type !== "puricone") {
-            obj = window.pcr.remainingList[head]["npc"];
-            removeFromObj(obj, tail);
-        }
-    }
-}
-
 function addToObj(obj, tail) {
-    obj["total"]++;
-    if (!obj["list"][tail]) {
-        obj["list"][tail] = 0;
+    if (!obj[tail]) {
+        obj[tail] = 0;
     }
-    obj["list"][tail]++;
-}
-
-function removeFromObj(obj, tail) {
-    obj["total"]--;
-    obj["list"][tail]--;
-    if (obj["list"][tail] == 0) {
-        delete obj["list"]["tail"];
-    }
+    obj[tail]++;
 }
 
 $("#clearClickHistory").click(e => {
@@ -74,18 +62,24 @@ $("#sortIf").click(e => {
 })
 
 function initData() {
-    window.pcr.remainingList = {};
-    let t = { "me": { "list": {}, "total": 0 }, "npc": { "list": {}, "total": 0 } };
+    window.pcr.remainList = { "me": {}, "npc": {} };
+    let tme = { "n": 0 };
+    let tnpc = { "n": 0 };
     window.pcr.META.forEach(e => {
         if (window.pcr.SAME_META.has(e)) {
-            window.pcr.remainingList[e] = t;
+            window.pcr.remainList.me[e] = tme;
+            window.pcr.remainList.npc[e] = tnpc;
         } else if (e !== "全部") {
-            window.pcr.remainingList[e] = { "me": { "list": {}, "total": 0 }, "npc": { "list": {}, "total": 0 } };
+            window.pcr.remainList.me[e] = { "n": 0 };
+            window.pcr.remainList.npc[e] = { "n": 0 };
         }
     });
     window.pcr.DATA_ARRAY.forEach(e => {
         if (!isClicked(e.name, e.iconID)) {
-            count(e.name, e.iconID, e.head, e.tail, e.type);
+            window.pcr.remainList.me[e.head].n++;
+            if (e.type !== "puricone") {
+                window.pcr.remainList.npc[e.head].n++;
+            }
         }
     });
     const metaDiv = $("#meta");
@@ -101,10 +95,7 @@ function initData() {
 }
 
 function reProcess() {
-    if (!window.pcr.sortIf) {
-        window.pcr.preDataArray = sort(window.pcr.preDataArray)
-    }
-    draw(window.pcr.preDataArray);
+    process(window.pcr.preWord);
 }
 
 function process(word) {
@@ -117,23 +108,52 @@ function process(word) {
     });
     dataArray = sort(dataArray);
     window.pcr.preDataArray = dataArray;
+    window.pcr.preWord = word;
     draw(dataArray);
 }
 
 function sort(dataArray) {
-    dataArray.forEach(config => {
-        config.weight = isClicked(config.name, config.iconID) ? 0 : 1;
-        config.weight *= 10;
-        config.weight += window.pcr.remainingList[config.tail]["npc"]["total"];
-        config.weight *= 10;
-        Object.keys(window.pcr.remainingList[config.tail]["npc"]["list"]).forEach(tail => {
-            config.weight += window.pcr.remainingList[tail]["me"]["total"];
-        });
-    });
     if (!window.pcr.sortIf) {
-        dataArray.sort((a, b) => b.weight - a.weight);
+        computeWeight();
+        dataArray.sort((a, b) => window.pcr.weights[b.tail].w - window.pcr.weights[a.tail].w);
     }
     return dataArray;
+}
+
+function initWeight() {
+    window.pcr.weights = {};
+
+    let t = { "w": 0 };
+    window.pcr.META.forEach(e => {
+        if (window.pcr.SAME_META.has(e)) {
+            window.pcr.weights[e] = t;
+        } else if (e !== "全部") {
+            window.pcr.weights[e] = { "w": 0 };
+        }
+    });
+}
+
+function computeWeight() {
+    initWeight();
+    for (let i = 0, k = 1; i < window.pcr.nRecursive; i++, k *= 10) {
+        temp = window.pcr.weights;
+        initWeight();
+        window.pcr.META.forEach(head => {
+            if (head !== "全部") {
+                if (i % 2) {
+                    window.pcr.weights[head].w = k * window.pcr.remainList.me[head].n;
+                    Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
+                        window.pcr.weights[head].w += temp[tail].w;
+                    });
+                } else {
+                    window.pcr.weights[head].w = k * window.pcr.remainList.npc[head].n;
+                    Object.keys(window.pcr.allList.me[head]).forEach(tail => {
+                        window.pcr.weights[head].w += temp[tail].w;
+                    });
+                }
+            }
+        });
+    }
 }
 
 function isMatchWord(e, selectWord) {
@@ -152,50 +172,37 @@ function draw(configArray) {
                 ${isClicked(config.name, config.iconID) ? '<img src="assets/dui.png" class="clicked"/>' : ""}
                 ${window.pcr.showName ? `<span class="text">${config.name}</span>` : ''}
             </div>
-            ${window.pcr.sortIf ? '' : `<div>${config.weight}</div>`}
+            ${window.pcr.sortIf ? '' : `<div>${window.pcr.weights[config.tail].w}</div>`}
             </div>`).mousedown((e) => {
             switch (e.which) {
                 case 1:
+                    if (!isClicked(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'))) {
+                        window.pcr.remainList.me[e.currentTarget.getAttribute('head')].n--;
+                        if (e.currentTarget.getAttribute('type') !== 'puricone') {
+                            window.pcr.remainList.npc[e.currentTarget.getAttribute('head')].n--;
+                        }
+                    }
+                    addClickHistory(
+                        e.currentTarget.getAttribute('data-name'), 
+                        e.currentTarget.getAttribute('data-icon-id')
+                    );
                     if (window.pcr.editClickHistory) {
-                        addClickHistory(
-                            e.currentTarget.getAttribute('data-name'), 
-                            e.currentTarget.getAttribute('data-icon-id')
-                        );
-                        count(
-                            e.currentTarget.getAttribute('data-name'), 
-                            e.currentTarget.getAttribute('data-icon-id'), 
-                            e.currentTarget.getAttribute('head'),
-                            e.currentTarget.getAttribute('tail'),
-                            e.currentTarget.getAttribute('type')
-                        );
                         reProcess();
                     } else {
-                        addClickHistory(
-                            e.currentTarget.getAttribute('data-name'), 
-                            e.currentTarget.getAttribute('data-icon-id')
-                        );
-                        count(
-                            e.currentTarget.getAttribute('data-name'), 
-                            e.currentTarget.getAttribute('data-icon-id'), 
-                            e.currentTarget.getAttribute('head'),
-                            e.currentTarget.getAttribute('tail'),
-                            e.currentTarget.getAttribute('type')
-                        );
                         process(e.currentTarget.getAttribute('tail'));
                     }
                     break;
                 case 3:
                     if (window.pcr.editClickHistory) {
+                        if (isClicked(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'))) {
+                            window.pcr.remainList.me[e.currentTarget.getAttribute('head')].n++;
+                            if (e.currentTarget.getAttribute('type') !== 'puricone') {
+                                window.pcr.remainList.npc[e.currentTarget.getAttribute('head')].n++;
+                            }
+                        }
                         removeClickHistory(
                             e.currentTarget.getAttribute('data-name'), 
                             e.currentTarget.getAttribute('data-icon-id')
-                        );
-                        uncount(
-                            e.currentTarget.getAttribute('data-name'), 
-                            e.currentTarget.getAttribute('data-icon-id'), 
-                            e.currentTarget.getAttribute('head'),
-                            e.currentTarget.getAttribute('tail'),
-                            e.currentTarget.getAttribute('type')
                         );
                         reProcess();
                     } else {
