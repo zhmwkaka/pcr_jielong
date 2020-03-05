@@ -116,10 +116,10 @@ function sort(dataArray) {
     if (!window.pcr.sortIf) {
         computeWeight();
         dataArray.sort((a, b) => {
-            if (!isClicked(a.name, a.iconID)) {
+            if (!isClicked(a.name, a.iconID) && isClicked(b.name, b.iconID)) {
                 return -1;
             }
-            if (!isClicked(b.name, b.iconID)) {
+            if (!isClicked(b.name, b.iconID) && isClicked(a.name, a.iconID)) {
                 return 1;
             }
             return window.pcr.weights[b.tail].w - window.pcr.weights[a.tail].w;
