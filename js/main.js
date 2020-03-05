@@ -1,19 +1,55 @@
 window.pcr = new Object;
 window.pcr.clickHistory = new Set(JSON.parse(localStorage.getItem("clickedHistory") || '[]'));
+window.pcr.showName = false;
+window.pcr.editClickHistory = false;
+window.pcr.sortIf = true;
 
-$.ajax('assets/data.json')
-    .done(data => {
-        window.pcr.META = data.meta;
-        window.pcr.DATA_ARRAY = data.data;
-        window.pcr.SAME_META = [];
-        data.sameMeta.forEach(arr => window.pcr.SAME_META.push(new Set(arr)));
-        initData();
-    });
+$.ajax('assets/data.json').done(data => {
+    window.pcr.META = data.meta;
+    window.pcr.DATA_ARRAY = data.data;
+    window.pcr.SAME_META = new Set(data.sameMeta[0]);
+    // data.sameMeta.forEach(arr => window.pcr.SAME_META.push(new Set(arr)));
+    initData();
+});
+
+function count(name, iconID, head, tail, type) {
+    if (!isClicked(name, iconID)) {
+        let obj = window.pcr.remainingList[head]["me"];
+        addToObj(obj, tail);
+        if (type !== "puricone") {
+            obj = window.pcr.remainingList[head]["npc"];
+            addToObj(obj, tail);
+        }
+    } else {
+        let obj = window.pcr.remainingList[head]["me"];
+        removeFromObj(obj, tail);
+        if (type !== "puricone") {
+            obj = window.pcr.remainingList[head]["npc"];
+            removeFromObj(obj, tail);
+        }
+    }
+}
+
+function addToObj(obj, tail) {
+    obj["total"]++;
+    if (!obj["list"][tail]) {
+        obj["list"][tail] = 0;
+    }
+    obj["list"][tail]++;
+}
+
+function removeFromObj(obj, tail) {
+    obj["total"]--;
+    obj["list"][tail]--;
+    if (obj["list"][tail] == 0) {
+        delete obj["list"]["tail"];
+    }
+}
 
 $("#clearClickHistory").click(e => {
     localStorage.removeItem('clickedHistory');
     window.pcr.clickHistory.clear();
-    reProcess();
+    initData();
 });
 
 $(document).bind('contextmenu', e => false);
@@ -28,7 +64,26 @@ $("#editClickHistory").click(e => {
     reProcess();
 });
 
+$("#sortIf").click(e => {
+    window.pcr.sortIf = e.currentTarget.checked;
+    reProcess();
+})
+
 function initData() {
+    window.pcr.remainingList = {};
+    let t = { "me": { "list": {}, "total": 0 }, "npc": { "list": {}, "total": 0 } };
+    window.pcr.META.forEach(e => {
+        if (window.pcr.SAME_META.has(e)) {
+            window.pcr.remainingList[e] = t;
+        } else if (e !== "全部") {
+            window.pcr.remainingList[e] = { "me": { "list": {}, "total": 0 }, "npc": { "list": {}, "total": 0 } };
+        }
+    });
+    window.pcr.DATA_ARRAY.forEach(e => {
+        if (!isClicked(e.name, e.iconID)) {
+            count(e.name, e.iconID, e.head, e.tail, e.type);
+        }
+    });
     const metaDiv = $("#meta");
     metaDiv.empty();
     window.pcr.META.forEach(e => {
@@ -42,6 +97,9 @@ function initData() {
 }
 
 function reProcess() {
+    if (!window.pcr.sortIf) {
+        window.pcr.preDataArray = sort(window.pcr.preDataArray)
+    }
     draw(window.pcr.preDataArray);
 }
 
@@ -59,7 +117,18 @@ function process(word) {
 }
 
 function sort(dataArray) {
-    // TODO 按照分数以及是否点击过排序
+    dataArray.forEach(config => {
+        config.weight = isClicked(config.iconID + config.name) ? 0 : 1;
+        config.weight *= 10;
+        config.weight += window.pcr.remainingList[config.tail]["npc"]["total"];
+        config.weight *= 10;
+        Object.keys(window.pcr.remainingList[config.tail]["npc"]["list"]).forEach(tail => {
+            config.weight += window.pcr.remainingList[tail]["me"]["total"];
+        });
+    });
+    if (!window.pcr.sortIf) {
+        dataArray.sort((a, b) => b.weight - a.weight);
+    }
     return dataArray;
 }
 
@@ -67,32 +136,63 @@ function isMatchWord(e, selectWord) {
     if (selectWord === null || selectWord === '全部' || e.head === selectWord) {
         return true;
     }
-    return window.pcr.SAME_META.some(set => set.has(selectWord) && set.has(e.head));
+    return window.pcr.SAME_META.has(selectWord) && window.pcr.SAME_META.has(e.head);
 }
 
 function draw(configArray) {
     const gameDiv = $('#game');
     gameDiv.empty();
     configArray.forEach(config => {
-        gameDiv.append($(`<div tail="${config.tail}" data-name="${config.name}" data-icon-id="${config.iconID}">
+        gameDiv.append($(`<div type="${config.type}" head="${config.head}" tail="${config.tail}" data-name="${config.name}" data-icon-id="${config.iconID}">
             <div class="icon ${config.type}" icon-id="${config.iconID}">
                 ${isClicked(config.name, config.iconID) ? '<img src="assets/dui.png" class="clicked"/>' : ""}
                 ${window.pcr.showName ? `<span class="text">${config.name}</span>` : ''}
             </div>
+            ${window.pcr.sortIf ? '' : `<div>${config.weight}</div>`}
             </div>`).mousedown((e) => {
             switch (e.which) {
                 case 1:
                     if (window.pcr.editClickHistory) {
-                        addClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
+                        addClickHistory(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id')
+                        );
+                        count(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id'), 
+                            e.currentTarget.getAttribute('head'),
+                            e.currentTarget.getAttribute('tail'),
+                            e.currentTarget.getAttribute('type')
+                        );
                         reProcess();
                     } else {
-                        addClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
+                        addClickHistory(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id')
+                        );
+                        count(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id'), 
+                            e.currentTarget.getAttribute('head'),
+                            e.currentTarget.getAttribute('tail'),
+                            e.currentTarget.getAttribute('type')
+                        );
                         process(e.currentTarget.getAttribute('tail'));
                     }
                     break;
                 case 3:
                     if (window.pcr.editClickHistory) {
-                        removeClickHistory(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'));
+                        removeClickHistory(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id')
+                        );
+                        count(
+                            e.currentTarget.getAttribute('data-name'), 
+                            e.currentTarget.getAttribute('data-icon-id'), 
+                            e.currentTarget.getAttribute('head'),
+                            e.currentTarget.getAttribute('tail'),
+                            e.currentTarget.getAttribute('type')
+                        );
                         reProcess();
                     } else {
                         process(e.currentTarget.getAttribute('tail'));
