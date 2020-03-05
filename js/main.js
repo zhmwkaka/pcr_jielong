@@ -118,7 +118,7 @@ function process(word) {
 
 function sort(dataArray) {
     dataArray.forEach(config => {
-        config.weight = isClicked(config.iconID + config.name) ? 0 : 1;
+        config.weight = isClicked(config.iconID, config.name) ? 0 : 1;
         config.weight *= 10;
         config.weight += window.pcr.remainingList[config.tail]["npc"]["total"];
         config.weight *= 10;
