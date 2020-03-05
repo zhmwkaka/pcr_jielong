@@ -20,7 +20,11 @@ function count(name, iconID, head, tail, type) {
             obj = window.pcr.remainingList[head]["npc"];
             addToObj(obj, tail);
         }
-    } else {
+    }
+ }
+
+ function uncount(name, iconID, head, tail, type) {
+    if (isClicked(name, iconID)) {
         let obj = window.pcr.remainingList[head]["me"];
         removeFromObj(obj, tail);
         if (type !== "puricone") {
@@ -186,7 +190,7 @@ function draw(configArray) {
                             e.currentTarget.getAttribute('data-name'), 
                             e.currentTarget.getAttribute('data-icon-id')
                         );
-                        count(
+                        uncount(
                             e.currentTarget.getAttribute('data-name'), 
                             e.currentTarget.getAttribute('data-icon-id'), 
                             e.currentTarget.getAttribute('head'),
