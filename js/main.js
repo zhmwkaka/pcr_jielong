@@ -149,12 +149,14 @@ function computeWeight() {
     for (let i = 0, k = 1; i < window.pcr.nRecursive; i++, k *= 20) {
         if (i % 2) {
             Object.keys(window.pcr.allList.me).forEach(head => {
+                window.pcr.weights.npc[head] = 0;
                 Object.keys(window.pcr.allList.me[head]).forEach(tail => {
                     window.pcr.weights.npc[head].w += k * window.pcr.remainList.npc[tail].n + window.pcr.weights.me[tail].w;
                 });
             });
         } else {
             Object.keys(window.pcr.allList.npc).forEach(head => {
+                window.pcr.weights.me[head] = 0;
                 Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
                     window.pcr.weights.me[head].w += k * window.pcr.remainList.me[tail].n + window.pcr.weights.npc[tail].w;
                 });
