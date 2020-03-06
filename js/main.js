@@ -146,21 +146,19 @@ function computeWeight() {
     for (let i = 0, k = 1; i < window.pcr.nRecursive; i++, k *= 10) {
         temp = window.pcr.weights;
         initWeight();
-        window.pcr.META.forEach(head => {
-            if (head !== "全部") {
-                if (i % 2) {
-                    window.pcr.weights[head].w = k * window.pcr.remainList.me[head].n;
-                    Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
-                        window.pcr.weights[head].w += temp[tail].w;
-                    });
-                } else {
-                    window.pcr.weights[head].w = k * window.pcr.remainList.npc[head].n;
-                    Object.keys(window.pcr.allList.me[head]).forEach(tail => {
-                        window.pcr.weights[head].w += temp[tail].w;
-                    });
-                }
-            }
-        });
+        if (i % 2) {
+            Object.keys(window.pcr.allList.me).forEach(head => {
+                Object.keys(window.pcr.allList.me[head]).forEach(tail => {
+                    window.pcr.weights[head].w += k * window.pcr.remainList.npc[tail].n + temp[tail].w;
+                });
+            });
+        } else {
+            Object.keys(window.pcr.allList.npc).forEach(head => {
+                Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
+                    window.pcr.weights[head].w += k * window.pcr.remainList.me[tail].n + temp[tail].w;
+                });
+            });
+        }
     }
 }
 
@@ -244,4 +242,11 @@ function removeClickHistory(name, iconID) {
 
 function isClicked(name, iconID) {
     return window.pcr.clickHistory.has(iconID + name);
+}
+
+function __addAllHistory() {
+    window.pcr.DATA_ARRAY.forEach(e => {
+        window.pcr.clickHistory.add(e.iconID + e.name);
+    });
+    localStorage.setItem("clickedHistory", JSON.stringify(Array.from(window.pcr.clickHistory)));
 }
