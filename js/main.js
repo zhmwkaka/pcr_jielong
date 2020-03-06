@@ -3,7 +3,7 @@ window.pcr.clickHistory = new Set(JSON.parse(localStorage.getItem("clickedHistor
 window.pcr.showName = false;
 window.pcr.editClickHistory = false;
 window.pcr.sortIf = true;
-window.pcr.nRecursive = 5; // odd number
+window.pcr.nRecursive = 3; // odd number
 window.pcr.preWord = "全部";
 
 $.ajax('assets/data.json').done(data => {
