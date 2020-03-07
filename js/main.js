@@ -3,7 +3,8 @@ window.pcr.clickHistory = new Set(JSON.parse(localStorage.getItem("clickedHistor
 window.pcr.showName = false;
 window.pcr.editClickHistory = false;
 window.pcr.sortIf = true;
-window.pcr.nRecursive = 3; // odd number
+window.pcr.showNPCweight = false;
+window.pcr.nRecursive = 5; // odd number
 window.pcr.preWord = "全部";
 
 $.ajax('assets/data.json').done(data => {
@@ -58,6 +59,11 @@ $("#editClickHistory").click(e => {
 
 $("#sortIf").click(e => {
     window.pcr.sortIf = e.currentTarget.checked;
+    process(window.pcr.preWord);
+});
+
+$("#showNPCweight").click(e => {
+    window.pcr.showNPCweight = e.currentTarget.checked;
     reProcess();
 })
 
@@ -82,6 +88,7 @@ function initData() {
             }
         }
     });
+    initWeight();   
     const metaDiv = $("#meta");
     metaDiv.empty();
     window.pcr.META.forEach(e => {
@@ -95,7 +102,7 @@ function initData() {
 }
 
 function reProcess() {
-    process(window.pcr.preWord);
+    draw(window.pcr.preDataArray);
 }
 
 function process(word) {
@@ -146,20 +153,37 @@ function initWeight() {
 
 function computeWeight() {
     initWeight();
-    for (let i = 0, k = 1; i < window.pcr.nRecursive; i++, k *= 20) {
+
+    for (let i = 0, k = 1; i < window.pcr.nRecursive; i++, k *= 1.5) {
         if (i % 2) {
-            Object.keys(window.pcr.allList.me).forEach(head => {
-                window.pcr.weights.npc[head].w = 0;
-                Object.keys(window.pcr.allList.me[head]).forEach(tail => {
-                    window.pcr.weights.npc[head].w += k * window.pcr.remainList.npc[tail].n + window.pcr.weights.me[tail].w;
-                });
+            window.pcr.META.forEach(head => {
+                if (window.pcr.allList.me[head]) {
+                    window.pcr.weights.npc[head].w = k * window.pcr.remainList.me[head].n;
+                    let N = 0;
+                    let sum = 0;
+                    Object.keys(window.pcr.allList.me[head]).forEach(tail => {
+                        sum += window.pcr.weights.me[tail].w * window.pcr.allList.me[head][tail];
+                        N += window.pcr.allList.me[head][tail];
+                    })
+                    window.pcr.weights.npc[head].w += sum / N;
+                } else if (head !== "全部") {
+                    window.pcr.weights.npc[head].w = 0;
+                }
             });
         } else {
-            Object.keys(window.pcr.allList.npc).forEach(head => {
-                window.pcr.weights.me[head].w = 0;
-                Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
-                    window.pcr.weights.me[head].w += k * window.pcr.remainList.me[tail].n + window.pcr.weights.npc[tail].w;
-                });
+            window.pcr.META.forEach(head => {
+                if (window.pcr.allList.npc[head]) {
+                    window.pcr.weights.me[head].w = k * window.pcr.remainList.npc[head].n;
+                    let N = 0;
+                    let sum = 0;
+                    Object.keys(window.pcr.allList.npc[head]).forEach(tail => {
+                        sum += window.pcr.weights.npc[tail].w * window.pcr.allList.npc[head][tail];
+                        N += window.pcr.allList.npc[head][tail];
+                    });
+                    window.pcr.weights.me[head].w += sum / N;
+                } else if (head !== "全部") {
+                    window.pcr.weights.me[head].w = 0;
+                }
             });
         }
     }
@@ -175,14 +199,28 @@ function isMatchWord(e, selectWord) {
 function draw(configArray) {
     const gameDiv = $('#game');
     gameDiv.empty();
+
+    let me_max = 0, npc_max = 0;
     configArray.forEach(config => {
+        if (window.pcr.weights.me[config.tail].w > me_max) {
+            me_max = window.pcr.weights.me[config.tail].w;
+        }
+        if ((config.type === 'puricone' ? 0 : window.pcr.weights.npc[config.tail].w) > npc_max) {
+            npc_max = (config.type === 'puricone' ? 0 : window.pcr.weights.npc[config.tail].w);
+        }
+    });
+    configArray.forEach(config => {
+        let me_weight = window.pcr.weights.me[config.tail].w;
+        let npc_weight = (config.type === 'puricone' ? 0 : window.pcr.weights.npc[config.tail].w);
         gameDiv.append($(`<div type="${config.type}" head="${config.head}" tail="${config.tail}" data-name="${config.name}" data-icon-id="${config.iconID}">
             <div class="icon ${config.type}" icon-id="${config.iconID}">
                 ${isClicked(config.name, config.iconID) ? '<img src="assets/dui.png" class="clicked"/>' : ""}
-                ${window.pcr.showName ? `<span class="text">${config.name}</span>` : ''}
-            </div>
-            ${window.pcr.sortIf ? '' : `<div>${window.pcr.weights.me[config.tail].w}</div>`}
-            </div>`).mousedown((e) => {
+                ${window.pcr.showName ? '<span class="text">' + config.name + '</span>' : ''}
+            </div><div>
+            ${(window.pcr.sortIf ? '' : ( 
+                '<span' + (me_weight == me_max ? ' style="color: limegreen;" ' : '') +'>' + me_weight.toFixed(1) + '</span>') + 
+                (window.pcr.showNPCweight ? '/<span' + (npc_weight == npc_max ? ' style="color: deeppink;" ' : '') + '>' + npc_weight.toFixed(1) + '</span>' : ''))
+            }</div></div>`).mousedown((e) => {
             switch (e.which) {
                 case 1:
                     if (!isClicked(e.currentTarget.getAttribute('data-name'), e.currentTarget.getAttribute('data-icon-id'))) {
@@ -196,7 +234,11 @@ function draw(configArray) {
                         e.currentTarget.getAttribute('data-icon-id')
                     );
                     if (window.pcr.editClickHistory) {
-                        reProcess();
+                        if (window.pcr.sortIf) {
+                            reProcess();
+                        } else {
+                            process(window.pcr.preWord);
+                        }
                     } else {
                         process(e.currentTarget.getAttribute('tail'));
                     }
@@ -213,7 +255,11 @@ function draw(configArray) {
                             e.currentTarget.getAttribute('data-name'), 
                             e.currentTarget.getAttribute('data-icon-id')
                         );
-                        reProcess();
+                        if (window.pcr.sortIf) {
+                            reProcess();
+                        } else {
+                            process(window.pcr.preWord);
+                        }
                     } else {
                         process(e.currentTarget.getAttribute('tail'));
                     }
